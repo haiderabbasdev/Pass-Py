@@ -1,0 +1,8 @@
+node_modules/
+venv/
+temp/
+test-output/
+bg-remover/test-output/
+.env
+*.log
+.DS_Store

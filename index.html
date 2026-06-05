@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html data-theme="dark" lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pass-Py — Print Your Photos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.9.0/fonts/remixicon.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <header>
+        <nav>
+            <div class="brand">
+                <div class="brand-mark">
+                    <i class="ri-printer-line"></i>
+                </div>
+                <span class="brand-text">
+                    <h1>Pass-Py</h1>
+                </span>
+            </div>
+            <span class="nav-meta">Photo printing, simplified</span>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+                <i class="ri-sun-line"></i>
+                <i class="ri-moon-line"></i>
+            </button>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>Upload your photos</h1>
+            <p class="subtitle">Add up to 3 photos. Set how many copies of each you need. We'll handle the rest.</p>
+
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-icon">
+                    <i class="ri-upload-cloud-line"></i>
+                </div>
+                <p class="drop-title">Drop files here or click to browse</p>
+                <p class="drop-hint">JPG, PNG, WEBP — up to 50MB each (max 3) • Ctrl+V to paste</p>
+                <input id="inp" type="file" multiple accept=".jpg,.jpeg,.png,.webp">
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="add-more-btn">
+                <button>+ Add More Photos</button>
+            </div>
+
+            <div class="bg-remove-option">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="removeBgCheck" checked>
+                    <span class="checkbox-custom"></span>
+                    <span class="checkbox-text">Remove background (AI)</span>
+                </label>
+            </div>
+
+            <button class="options-toggle" id="optToggle">
+                <i class="ri-arrow-down-s-line"></i>
+                <span id="toggleText">Advanced Options</span>
+            </button>
+
+            <div class="options-panel" id="optPanel">
+                <div class="options-grid">
+                    <div class="opt-field">
+                        <label for="width">Width (px)</label>
+                        <input type="number" id="width" value="413" min="100" max="1200">
+                    </div>
+                    <div class="opt-field">
+                        <label for="height">Height (px)</label>
+                        <input type="number" id="height" value="531" min="100" max="1200">
+                    </div>
+                    <div class="opt-field">
+                        <label for="spacing">Spacing (px)</label>
+                        <input type="number" id="spacing" value="20" min="0" max="100">
+                    </div>
+                    <div class="opt-field">
+                        <label for="border">Border (px)</label>
+                        <input type="number" id="border" value="2" min="0" max="10">
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn">
+                <button id="generateBtn">
+                    Generate print sheet
+                    <i class="ri-arrow-right-line"></i>
+                </button>
+            </div>
+
+            <p class="footer-note">
+                Your files are processed on backend and deleted after sometime.<br>
+                No data is Preserved.<a href="#">Learn more</a>
+            </p>
+        </div>
+    </main>
+
+    <div class="toast" id="toast">
+        <i class="ri-check-line"></i>
+        <span id="toastMsg">Ready to print</span>
+    </div>
+
+    <div class="crop-modal" id="cropModal">
+        <div class="crop-container">
+            <div class="crop-header">
+                <h3>Crop Photo</h3>
+                <button class="crop-close" id="cropClose">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+            <div class="crop-area">
+                <img id="cropImage" src="" alt="Crop preview">
+            </div>
+            <div class="crop-actions">
+                <button class="crop-cancel-btn" id="cropCancel">Cancel</button>
+                <button class="crop-apply-btn" id="cropApply">Apply Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+
+</html>
