@@ -7,12 +7,11 @@ const html = document.documentElement;
 try {
     const savedTheme = localStorage.getItem('theme');
     const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
     if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
         html.setAttribute('data-theme', 'dark');
     }
 } catch (e) {
-    console.warn('Failed to load theme preference:', e);
+    console.warn('Theme load failed:', e);
 }
 
 themeToggle.addEventListener('click', () => {
@@ -26,172 +25,122 @@ themeToggle.addEventListener('click', () => {
             localStorage.setItem('theme', 'dark');
         }
     } catch (e) {
-        console.warn('Failed to toggle theme:', e);
+        console.warn('Theme toggle failed:', e);
     }
 });
 
 // ====================
 // DOM ELEMENTS
 // ====================
-let dropZone, fileInput, fileList, addMoreBtn, optToggle, optPanel, toggleText, toast, toastMsg, generateBtn, removeBgCheck;
-
-try {
-    dropZone = document.getElementById('dropZone');
-    fileInput = document.getElementById('inp');
-    fileList = document.getElementById('fileList');
-    addMoreBtn = document.querySelector('.add-more-btn');
-    optToggle = document.getElementById('optToggle');
-    optPanel = document.getElementById('optPanel');
-    toggleText = document.getElementById('toggleText');
-    toast = document.getElementById('toast');
-    toastMsg = document.getElementById('toastMsg');
-    generateBtn = document.getElementById('generateBtn');
-    removeBgCheck = document.getElementById('removeBgCheck');
-} catch (e) {
-    console.error('Failed to initialize DOM elements:', e);
-}
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('inp');
+const fileList = document.getElementById('fileList');
+const addMoreBtn = document.querySelector('.add-more-btn');
+const optToggle = document.getElementById('optToggle');
+const optPanel = document.getElementById('optPanel');
+const toggleText = document.getElementById('toggleText');
+const toast = document.getElementById('toast');
+const toastMsg = document.getElementById('toastMsg');
+const generateBtn = document.getElementById('generateBtn');
+const removeBgCheck = document.getElementById('removeBgCheck');
 
 let files = [];
 
 // ====================
 // DRAG & DROP
 // ====================
-try {
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-    });
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+});
 
-    function preventDefaults(e) {
-        try {
-            e.preventDefault();
-            e.stopPropagation();
-        } catch (err) {
-            console.warn('Prevent defaults failed:', err);
-        }
-    }
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => {
-            try {
-                dropZone.classList.add('drag-active');
-            } catch (e) {
-                console.warn('Drag active failed:', e);
-            }
-        }, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => {
-            try {
-                dropZone.classList.remove('drag-active');
-            } catch (e) {
-                console.warn('Drag remove failed:', e);
-            }
-        }, false);
-    });
-
-    dropZone.addEventListener('click', (e) => {
-        try {
-            if (e.target.closest('.file-item')) return;
-            fileInput.click();
-        } catch (err) {
-            console.warn('Drop zone click failed:', err);
-        }
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        try {
-            const dt = e.dataTransfer;
-            const newFiles = [...dt.files].filter(f => 
-                ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
-            );
-            handleFiles(newFiles);
-        } catch (err) {
-            console.error('Drop handler failed:', err);
-            showToast('Failed to process dropped files');
-        }
-    });
-} catch (e) {
-    console.error('Drag and drop initialization failed:', e);
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
 }
+
+['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
+});
+
+dropZone.addEventListener('click', (e) => {
+    if (e.target.closest('.file-item')) return;
+    fileInput.click();
+});
+
+dropZone.addEventListener('drop', (e) => {
+    try {
+        const dt = e.dataTransfer;
+        const newFiles = [...dt.files].filter(f => 
+            ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
+        );
+        handleFiles(newFiles);
+    } catch (err) {
+        console.error('Drop failed:', err);
+        showToast('Failed to process dropped files');
+    }
+});
 
 // ====================
 // FILE INPUT
 // ====================
-try {
-    addMoreBtn.querySelector('button').addEventListener('click', () => {
-        try {
-            fileInput.click();
-        } catch (err) {
-            console.warn('Add more click failed:', err);
-        }
-    });
+addMoreBtn.querySelector('button').addEventListener('click', () => fileInput.click());
 
-    fileInput.addEventListener('change', (e) => {
-        try {
-            const newFiles = [...e.target.files].filter(f => 
-                ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
-            );
+fileInput.addEventListener('change', (e) => {
+    try {
+        const newFiles = [...e.target.files].filter(f => 
+            ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
+        );
+        handleFiles(newFiles);
+        fileInput.value = '';
+    } catch (err) {
+        console.error('File input failed:', err);
+        showToast('Failed to load files');
+    }
+});
+
+// ====================
+// CLIPBOARD PASTE
+// ====================
+window.addEventListener('paste', (e) => {
+    try {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        const imageItems = [];
+        for (const item of items) {
+            if (item.type.startsWith('image/')) imageItems.push(item);
+        }
+        if (imageItems.length === 0) return;
+
+        e.preventDefault();
+        
+        const newFiles = [];
+        imageItems.forEach((item, index) => {
+            try {
+                const blob = item.getAsFile();
+                const ext = item.type.split('/')[1] || 'png';
+                newFiles.push(new File([blob], `clipboard-${Date.now()}-${index}.${ext}`, {
+                    type: item.type,
+                    lastModified: Date.now()
+                }));
+            } catch (err) {
+                console.warn('Clipboard item failed:', err);
+            }
+        });
+
+        if (newFiles.length > 0) {
             handleFiles(newFiles);
-            fileInput.value = '';
-        } catch (err) {
-            console.error('File input change failed:', err);
-            showToast('Failed to load files');
+            showToast(`Pasted ${newFiles.length} image${newFiles.length > 1 ? 's' : ''}`);
         }
-    });
-} catch (e) {
-    console.error('File input initialization failed:', e);
-}
-
-// ====================
-// CLIPBOARD PASTE (Ctrl+V)
-// ====================
-try {
-    window.addEventListener('paste', (e) => {
-        try {
-            const items = e.clipboardData?.items;
-            if (!items) return;
-
-            const imageItems = [];
-            
-            for (const item of items) {
-                if (item.type.startsWith('image/')) {
-                    imageItems.push(item);
-                }
-            }
-
-            if (imageItems.length === 0) return;
-
-            e.preventDefault();
-            
-            const newFiles = [];
-            
-            imageItems.forEach((item, index) => {
-                try {
-                    const blob = item.getAsFile();
-                    const extension = item.type.split('/')[1] || 'png';
-                    const file = new File([blob], `clipboard-${Date.now()}-${index}.${extension}`, {
-                        type: item.type,
-                        lastModified: Date.now()
-                    });
-                    newFiles.push(file);
-                } catch (err) {
-                    console.warn('Clipboard item processing failed:', err);
-                }
-            });
-
-            if (newFiles.length > 0) {
-                handleFiles(newFiles);
-                showToast(`Pasted ${newFiles.length} image${newFiles.length > 1 ? 's' : ''} from clipboard`);
-            }
-        } catch (err) {
-            console.error('Paste handler failed:', err);
-            showToast('Failed to paste from clipboard');
-        }
-    });
-} catch (e) {
-    console.error('Clipboard initialization failed:', e);
-}
+    } catch (err) {
+        console.error('Paste failed:', err);
+        showToast('Failed to paste from clipboard');
+    }
+});
 
 // ====================
 // FILE HANDLING
@@ -208,7 +157,7 @@ function handleFiles(newFiles) {
                 return;
             }
             newFiles = newFiles.slice(0, allowed);
-            showToast(`Only ${allowed} more photo${allowed > 1 ? 's' : ''} allowed (max 3)`);
+            showToast(`Only ${allowed} more photo${allowed > 1 ? 's' : ''} allowed`);
         }
         
         files = [...files, ...newFiles];
@@ -230,43 +179,36 @@ function renderFiles() {
             return;
         }
 
-        fileList.innerHTML = files.map((file, i) => {
-            try {
-                return `
-                    <div class="file-item">
-                        <div class="file-thumb">
-                            <img src="${URL.createObjectURL(file)}" alt="${file.name}" 
-                                 style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
-                            <div class="crop-overlay">
-                                <i class="ri-scissors-cut-line"></i>
-                                <span>Crop</span>
-                            </div>
-                        </div>
-                        <div class="file-info">
-                            <div class="file-name">${file.name}</div>
-                            <div class="file-meta">${(file.size / 1024 / 1024).toFixed(1)} MB</div>
-                            <div class="copy-select">
-                                <label>Copies:</label>
-                                <select class="copy-count" data-index="${i}">
-                                    <option value="4">4</option>
-                                    <option value="6" selected>6</option>
-                                    <option value="8">8</option>
-                                    <option value="12">12</option>
-                                    <option value="16">16</option>
-                                    <option value="24">24</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button class="file-remove" onclick="removeFile(${i})" aria-label="Remove file">
-                            <i class="ri-close-line"></i>
-                        </button>
+        fileList.innerHTML = files.map((file, i) => `
+            <div class="file-item">
+                <div class="file-thumb">
+                    <img src="${URL.createObjectURL(file)}" alt="${file.name}" 
+                         style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
+                    <div class="crop-overlay">
+                        <i class="ri-scissors-cut-line"></i>
+                        <span>Crop</span>
                     </div>
-                `;
-            } catch (err) {
-                console.warn('File item render failed:', err);
-                return '';
-            }
-        }).join('');
+                </div>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-meta">${(file.size / 1024 / 1024).toFixed(1)} MB</div>
+                    <div class="copy-select">
+                        <label>Copies:</label>
+                        <select class="copy-count" data-index="${i}">
+                            <option value="4">4</option>
+                            <option value="6" selected>6</option>
+                            <option value="8">8</option>
+                            <option value="12">12</option>
+                            <option value="16">16</option>
+                            <option value="24">24</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="file-remove" onclick="removeFile(${i})" aria-label="Remove file">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+        `).join('');
 
         fileList.classList.add('active');
         
@@ -277,7 +219,7 @@ function renderFiles() {
             addMoreBtn.classList.add('active');
         }
     } catch (err) {
-        console.error('Render files failed:', err);
+        console.error('Render failed:', err);
         showToast('Failed to display files');
     }
 }
@@ -287,7 +229,7 @@ function removeFile(index) {
         files.splice(index, 1);
         renderFiles();
     } catch (err) {
-        console.error('Remove file failed:', err);
+        console.error('Remove failed:', err);
         showToast('Failed to remove file');
     }
 }
@@ -295,87 +237,30 @@ function removeFile(index) {
 // ====================
 // CROP FUNCTIONALITY
 // ====================
-let cropModal, cropImage, cropClose, cropCancel, cropApply;
+const cropModal = document.getElementById('cropModal');
+const cropImage = document.getElementById('cropImage');
+const cropClose = document.getElementById('cropClose');
+const cropCancel = document.getElementById('cropCancel');
+const cropApply = document.getElementById('cropApply');
+
 let cropper = null;
 let currentCropIndex = null;
 
-try {
-    cropModal = document.getElementById('cropModal');
-    cropImage = document.getElementById('cropImage');
-    cropClose = document.getElementById('cropClose');
-    cropCancel = document.getElementById('cropCancel');
-    cropApply = document.getElementById('cropApply');
-
-    fileList.addEventListener('click', (e) => {
-        try {
-            const thumb = e.target.closest('.file-thumb');
-            if (!thumb) return;
-            
-            const fileItem = thumb.closest('.file-item');
-            const index = Array.from(fileList.children).indexOf(fileItem);
-            
-            if (index !== -1 && files[index]) {
-                openCropper(index);
-            }
-        } catch (err) {
-            console.error('Crop click handler failed:', err);
+fileList.addEventListener('click', (e) => {
+    try {
+        const thumb = e.target.closest('.file-thumb');
+        if (!thumb) return;
+        
+        const fileItem = thumb.closest('.file-item');
+        const index = Array.from(fileList.children).indexOf(fileItem);
+        
+        if (index !== -1 && files[index]) {
+            openCropper(index);
         }
-    });
-
-    cropClose.addEventListener('click', closeCropper);
-    cropCancel.addEventListener('click', closeCropper);
-
-    cropApply.addEventListener('click', () => {
-        try {
-            if (!cropper || currentCropIndex === null) return;
-            
-            const canvas = cropper.getCroppedCanvas();
-            
-            canvas.toBlob((blob) => {
-                try {
-                    const originalFile = files[currentCropIndex];
-                    const croppedFile = new File([blob], `cropped_${originalFile.name}`, {
-                        type: originalFile.type,
-                        lastModified: Date.now()
-                    });
-                    
-                    files[currentCropIndex] = croppedFile;
-                    renderFiles();
-                    closeCropper();
-                    showToast('Photo cropped!');
-                } catch (err) {
-                    console.error('Crop blob processing failed:', err);
-                    showToast('Failed to apply crop');
-                }
-            }, files[currentCropIndex].type, 0.9);
-        } catch (err) {
-            console.error('Crop apply failed:', err);
-            showToast('Failed to crop photo');
-        }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        try {
-            if (e.key === 'Escape' && cropModal.classList.contains('open')) {
-                closeCropper();
-            }
-        } catch (err) {
-            console.warn('Escape key handler failed:', err);
-        }
-    });
-
-    cropModal.addEventListener('click', (e) => {
-        try {
-            if (e.target === cropModal) {
-                closeCropper();
-            }
-        } catch (err) {
-            console.warn('Crop modal click failed:', err);
-        }
-    });
-} catch (e) {
-    console.error('Crop functionality initialization failed:', e);
-}
+    } catch (err) {
+        console.error('Crop click failed:', err);
+    }
+});
 
 function openCropper(index) {
     try {
@@ -391,7 +276,6 @@ function openCropper(index) {
                 cropImage.onload = () => {
                     try {
                         if (cropper) cropper.destroy();
-                        
                         cropper = new Cropper(cropImage, {
                             aspectRatio: NaN,
                             viewMode: 1,
@@ -403,7 +287,7 @@ function openCropper(index) {
                             background: false,
                         });
                     } catch (err) {
-                        console.error('Cropper initialization failed:', err);
+                        console.error('Cropper init failed:', err);
                         showToast('Failed to load cropper');
                     }
                 };
@@ -437,29 +321,67 @@ function closeCropper() {
     }
 }
 
-// ====================
-// ADVANCED OPTIONS TOGGLE
-// ====================
-try {
-    optToggle.addEventListener('click', () => {
-        try {
-            const isOpen = optPanel.classList.contains('open');
-            if (isOpen) {
-                optPanel.classList.remove('open');
-                optToggle.classList.remove('open');
-                toggleText.textContent = 'Advanced Options';
-            } else {
-                optPanel.classList.add('open');
-                optToggle.classList.add('open');
-                toggleText.textContent = 'Hide Advanced Options';
+cropClose.addEventListener('click', closeCropper);
+cropCancel.addEventListener('click', closeCropper);
+
+cropApply.addEventListener('click', () => {
+    try {
+        if (!cropper || currentCropIndex === null) return;
+        
+        const canvas = cropper.getCroppedCanvas();
+        
+        canvas.toBlob((blob) => {
+            try {
+                const originalFile = files[currentCropIndex];
+                const croppedFile = new File([blob], `cropped_${originalFile.name}`, {
+                    type: originalFile.type,
+                    lastModified: Date.now()
+                });
+                
+                files[currentCropIndex] = croppedFile;
+                renderFiles();
+                closeCropper();
+                showToast('Photo cropped!');
+            } catch (err) {
+                console.error('Crop blob failed:', err);
+                showToast('Failed to apply crop');
             }
-        } catch (err) {
-            console.warn('Options toggle failed:', err);
+        }, files[currentCropIndex].type, 0.9);
+    } catch (err) {
+        console.error('Crop apply failed:', err);
+        showToast('Failed to crop photo');
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && cropModal.classList.contains('open')) {
+        closeCropper();
+    }
+});
+
+cropModal.addEventListener('click', (e) => {
+    if (e.target === cropModal) closeCropper();
+});
+
+// ====================
+// ADVANCED OPTIONS
+// ====================
+optToggle.addEventListener('click', () => {
+    try {
+        const isOpen = optPanel.classList.contains('open');
+        if (isOpen) {
+            optPanel.classList.remove('open');
+            optToggle.classList.remove('open');
+            toggleText.textContent = 'Advanced Options';
+        } else {
+            optPanel.classList.add('open');
+            optToggle.classList.add('open');
+            toggleText.textContent = 'Hide Advanced Options';
         }
-    });
-} catch (e) {
-    console.error('Options toggle initialization failed:', e);
-}
+    } catch (err) {
+        console.warn('Toggle failed:', err);
+    }
+});
 
 // ====================
 // TOAST
@@ -468,72 +390,15 @@ function showToast(msg) {
     try {
         toastMsg.textContent = msg;
         toast.classList.add('show');
-        setTimeout(() => {
-            try {
-                toast.classList.remove('show');
-            } catch (err) {
-                console.warn('Toast hide failed:', err);
-            }
-        }, 2800);
+        setTimeout(() => toast.classList.remove('show'), 2800);
     } catch (err) {
-        console.error('Show toast failed:', err);
-        // Fallback to alert if toast is completely broken
-        try {
-            alert(msg);
-        } catch (e) {
-            console.error('Alert fallback failed:', e);
-        }
+        console.error('Toast failed:', err);
+        try { alert(msg); } catch (e) {}
     }
 }
 
 // ====================
-// RATE LIMIT HELPER
-// ====================
-function handleRateLimit(response) {
-    try {
-        const retryAfter = response.headers.get('Retry-After') || 
-                           response.headers.get('ratelimit-reset') || 
-                           '15';
-        const remaining = response.headers.get('RateLimit-Remaining');
-        return { retryAfter, remaining };
-    } catch (err) {
-        console.warn('Rate limit header parsing failed:', err);
-        return { retryAfter: '15', remaining: null };
-    }
-}
-
-// ====================
-// FETCH WITH TIMEOUT & RETRY
-// ====================
-async function fetchWithTimeout(url, options = {}, timeout = 30000, retries = 1) {
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
-        
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        return response;
-    } catch (err) {
-        if (err.name === 'AbortError') {
-            throw new Error('Request timed out. Please try again.');
-        }
-        
-        if (retries > 0) {
-            console.log(`Retrying fetch... ${retries} attempts left`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            return fetchWithTimeout(url, options, timeout, retries - 1);
-        }
-        
-        throw err;
-    }
-}
-
-// ====================
-// GENERATE PRINT SHEET
+// GENERATE
 // ====================
 generateBtn.addEventListener('click', async () => {
     try {
@@ -550,74 +415,60 @@ generateBtn.addEventListener('click', async () => {
             generateBtn.innerHTML = '<i class="ri-loader-2-line spinning"></i> Processing...';
             generateBtn.disabled = true;
         } catch (err) {
-            console.warn('Button state update failed:', err);
+            console.warn('Button update failed:', err);
         }
 
+        // Step 1: Remove backgrounds if checked
         let processedFiles = [...files];
         
-        // Background removal if checked
         if (removeBg) {
             for (let i = 0; i < files.length; i++) {
                 try {
                     generateBtn.innerHTML = `<i class="ri-loader-2-line spinning"></i> Removing background (${i + 1}/${files.length})...`;
                     
-                    const formData = new FormData();
-                    formData.append('image', files[i]);
+                    const bgFormData = new FormData();
+                    bgFormData.append('image', files[i]);
                     
-                    const bgResponse = await fetchWithTimeout('/api/remove-bg', {
+                    const bgResponse = await fetch('/api/remove-bg', {
                         method: 'POST',
-                        body: formData
-                    }, 60000); // 60s timeout for BG removal
+                        body: bgFormData
+                    });
                     
-                    // Handle rate limit for BG removal
                     if (bgResponse.status === 429) {
-                        const { retryAfter } = handleRateLimit(bgResponse);
+                        const retryAfter = bgResponse.headers.get('Retry-After') || '15';
                         const errorData = await bgResponse.json().catch(() => ({}));
-                        throw new Error(errorData.details || `Rate limit: Background removal. Retry after ${retryAfter} minutes.`);
-                    }
-                    
-                    // Handle file size error
-                    if (bgResponse.status === 413) {
-                        const errorData = await bgResponse.json().catch(() => ({}));
-                        throw new Error(errorData.details || 'File too large for background removal.');
+                        throw new Error(errorData.details || `Rate limit: BG removal. Retry after ${retryAfter} min.`);
                     }
                     
                     if (bgResponse.ok) {
-                        try {
-                            const blob = await bgResponse.blob();
-                            processedFiles[i] = new File([blob], `nobg_${files[i].name}`, {
-                                type: 'image/png'
-                            });
-                        } catch (err) {
-                            console.warn('BG removal blob processing failed:', err);
-                            // Keep original file on failure
-                        }
+                        const blob = await bgResponse.blob();
+                        processedFiles[i] = new File([blob], `nobg_${files[i].name}`, {
+                            type: 'image/png'
+                        });
                     } else {
-                        console.warn('BG removal failed for file', i, '- keeping original');
+                        console.warn('BG removal failed for file', i, '- using original');
                     }
                 } catch (err) {
-                    if (err.message.includes('Rate limit') || err.message.includes('timed out')) {
-                        throw err; // Re-throw critical errors
-                    }
-                    console.warn('BG removal for file', i, 'failed:', err);
-                    // Continue with original file
+                    if (err.message.includes('Rate limit')) throw err;
+                    console.warn('BG removal error for file', i, '- using original');
                 }
             }
         }
-        
+
+        // Step 2: Generate PDF
         try {
             generateBtn.innerHTML = '<i class="ri-loader-2-line spinning"></i> Generating PDF...';
         } catch (err) {
             console.warn('Button update failed:', err);
         }
-        
+
         const formData = new FormData();
         
         processedFiles.forEach((file, index) => {
             try {
                 formData.append('images', file);
             } catch (err) {
-                console.warn('Failed to append file', index, 'to form data:', err);
+                console.warn('File append failed:', err);
             }
         });
         
@@ -626,7 +477,7 @@ generateBtn.addEventListener('click', async () => {
             const copies = Array.from(copySelects).map(select => select.value);
             formData.append('copies', JSON.stringify(copies));
         } catch (err) {
-            console.warn('Copy count collection failed:', err);
+            console.warn('Copies collection failed:', err);
             formData.append('copies', JSON.stringify([6, 6, 6]));
         }
         
@@ -641,25 +492,23 @@ generateBtn.addEventListener('click', async () => {
             if (spacing) formData.append('spacing', spacing);
             if (border) formData.append('border', border);
         } catch (err) {
-            console.warn('Advanced options collection failed:', err);
+            console.warn('Options collection failed:', err);
         }
         
         formData.append('photoType', 'passport');
         formData.append('removeBg', removeBg ? 'true' : 'false');
         
-        const response = await fetchWithTimeout('/api/generate', {
+        const response = await fetch('/api/generate', {
             method: 'POST',
             body: formData
-        }, 120000); // 120s timeout for PDF generation
+        });
         
-        // Handle rate limit for generation
         if (response.status === 429) {
-            const { retryAfter } = handleRateLimit(response);
+            const retryAfter = response.headers.get('Retry-After') || '15';
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.details || `Rate limit reached. Retry after ${retryAfter} minutes.`);
         }
         
-        // Handle file size / count errors
         if (response.status === 413) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.details || 'File too large. Maximum 50MB per file.');
@@ -670,27 +519,11 @@ generateBtn.addEventListener('click', async () => {
             throw new Error(errorData.details || 'Invalid file type. Only JPG, PNG, WEBP allowed.');
         }
         
-        if (response.status === 400) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.details || 'Bad request. Please check your inputs.');
-        }
-        
         if (!response.ok) {
             const error = await response.json().catch(() => ({ error: 'Generation failed' }));
             throw new Error(error.details || error.error || `Server error: ${response.status}`);
         }
         
-        // Check remaining rate limit
-        try {
-            const { remaining } = handleRateLimit(response);
-            if (remaining && parseInt(remaining) < 3) {
-                showToast(`⚠️ ${remaining} generations remaining this window`);
-            }
-        } catch (err) {
-            console.warn('Rate limit warning failed:', err);
-        }
-        
-        // Download PDF
         try {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -703,9 +536,8 @@ generateBtn.addEventListener('click', async () => {
             window.URL.revokeObjectURL(url);
             
             showToast('Print sheet downloaded!');
-            dropZone.classList.add('has-files');
         } catch (err) {
-            console.error('PDF download failed:', err);
+            console.error('Download failed:', err);
             throw new Error('Failed to download PDF. Please try again.');
         }
         
@@ -713,20 +545,17 @@ generateBtn.addEventListener('click', async () => {
         console.error('Generation error:', error);
         
         try {
-            // Check if it's a rate limit error
-            if (error.message.toLowerCase().includes('rate limit') || 
-                error.message.toLowerCase().includes('too many')) {
-                showToast(`⏳ ${error.message}`);
+            if (error.message.toLowerCase().includes('rate limit')) {
+                showToast(`${error.message}`);
             } else if (error.message.includes('timed out')) {
-                showToast(`⏳ ${error.message}`);
+                showToast(`${error.message}`);
             } else {
-                showToast(`❌ ${error.message}`);
+                showToast(`${error.message}`);
             }
-            
             shakeElement(generateBtn);
         } catch (err) {
-            console.error('Error handling failed:', err);
-            alert('An error occurred. Please refresh the page and try again.');
+            console.error('Error display failed:', err);
+            alert('An error occurred. Please refresh and try again.');
         }
         
     } finally {
@@ -745,12 +574,12 @@ function shakeElement(el) {
         el.offsetHeight;
         el.style.animation = 'shake 0.5s ease';
     } catch (err) {
-        console.warn('Shake animation failed:', err);
+        console.warn('Shake failed:', err);
     }
 }
 
 // ====================
-// KEYFRAME INJECTION
+// KEYFRAMES
 // ====================
 try {
     const style = document.createElement('style');
@@ -772,11 +601,11 @@ try {
     `;
     document.head.appendChild(style);
 } catch (e) {
-    console.error('Keyframe injection failed:', e);
+    console.error('Keyframes failed:', e);
 }
 
 // ====================
-// GLOBAL ERROR HANDLER
+// GLOBAL ERROR HANDLERS
 // ====================
 window.addEventListener('error', (e) => {
     console.error('Global error:', e.error);
@@ -784,6 +613,6 @@ window.addEventListener('error', (e) => {
 });
 
 window.addEventListener('unhandledrejection', (e) => {
-    console.error('Unhandled promise rejection:', e.reason);
+    console.error('Unhandled rejection:', e.reason);
     showToast('Network error. Please check your connection.');
 });
